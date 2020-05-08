@@ -1,0 +1,8 @@
+bmp180.c:19:6:ReadCalPara	80	static
+bmp180.c:34:9:ReadInt	104	static
+bmp180.c:43:10:ReadUInt	104	static
+bmp180.c:52:6:ReadBMP180	216	static
+bmp180.c:105:9:ReadSensor	112	static
+bmp180.c:126:6:SetupBMP	104	static
+bmp180.c:134:6:ReadRegister	16	static
+bmp180.c:140:6:WriteRegister	24	static

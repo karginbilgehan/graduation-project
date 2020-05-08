@@ -11,10 +11,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 
-/*void delay(uint16_t delay){
-	__HAL_TIM_SET_COUNTER(&htim1,0);
-	while(__HAL_TIM_GET_COUNTER(&htim1) < delay);
-}*/
+
 void gpio_set_input (GPIO_InitTypeDef GPIO_InitStruct)
 {
   GPIO_InitStruct.Pin = GPIO_PIN_1;
