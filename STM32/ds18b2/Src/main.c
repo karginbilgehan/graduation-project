@@ -20,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "ds18b.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -91,13 +92,8 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
-/*IT IS FOR DS18B TEMP SENSOR */
+/*IT IS FOR SENSOR'S DELAY */
 void delay(uint16_t delay);
-void gpio_set_input (void);
-void gpio_set_output (void);
-uint8_t ds18b20_init (void);
-void write (uint8_t data);
-uint8_t read (void);
 
 /*IT IS FOR BMP180 PRES SENSOR*/
 void WriteRegister(uint8_t DevAddress,char address,char content);
@@ -117,7 +113,6 @@ void check_response (void);
 uint8_t read_data_DHT22 (void);
 
 /*RUN FUNCTIONS*/
-void runDS18B();
 void runDHT22();
 void run_pulseSensor(void);
 
@@ -128,9 +123,7 @@ void run_pulseSensor(void);
 
 /*IT IS FOR DS18B TEMP SENSOR */
 GPIO_InitTypeDef GPIO_InitStruct;
-uint8_t check =2, temp_l, temp_h;
-uint16_t temp;
-float temperature_for_ds18b;
+
 
 /*IT IS FOR BMP180 PRES SENSOR*/
 uint8_t BMP180_ADDR = 0xEE;		//i2c address for BMP180
@@ -214,7 +207,7 @@ int main(void)
 	 //HAL_Delay(100);
 	 /*FOR DS18B SENSOR */
 
-	 runDS18B();
+	 runDS18B(GPIO_InitStruct,huart1);
 	 HAL_Delay(100);
 
 	 /*FOR PRESS SENSOR */
@@ -560,36 +553,6 @@ void delay(uint16_t delay){
 	while(__HAL_TIM_GET_COUNTER(&htim1) < delay);
 }
 
-void runDS18B(){
-
-		 char ds18bval[50];//it is for temperature val
-		 int lenOfds18=0;
-		 int i=0;
-		/*FOR DS18B TEMP SENSOR */
-		 check = ds18b20_init ();
-		 HAL_Delay (1);
-		 write (0xCC);  // skip ROM
-		 write (0x44);  // convert t
-		 HAL_Delay (800);
-		 ds18b20_init ();
-	     HAL_Delay(1);
-		 write (0xCC);  // skip ROM
-		 write (0xBE);  // Read Scratchpad
-		 temp_l = read();
-		 temp_h = read();
-		 temp = (temp_h<<8)|temp_l;
-		 temperature_for_ds18b = (float)temp/16;
-
-		 /* FOR DS18B UART TRANSMIT*/
-		 sprintf(ds18bval,"temp.val=%d%c%c%c%c",(int)temperature_for_ds18b , 0xFF, 0xFF, 0xFF,'\n');
-		 while(ds18bval[i]!='\n'){
-			 lenOfds18++;
-			 ++i;
-		 }
-		 i=0;
-		 HAL_UART_Transmit(&huart1,ds18bval,lenOfds18,100);
-}
-
 void runDHT22(){
 		 int i=0;
 		 char dht22Temp[50],dht22humidity[50];//it is for temperature val
@@ -655,101 +618,6 @@ void run_pulseSensor(void)
 	tempData[2] = '\000';
 	 //HAL_Delay(100);
 }
-void gpio_set_input (void)
-{
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-}
-
-
-void gpio_set_output (void)
-{
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-}
-
-uint8_t ds18b20_init (void)
-{
-
-	gpio_set_output ();   // set the pin as output
-	HAL_GPIO_WritePin (GPIOA, GPIO_PIN_1, 0);  // pull the pin low
-	delay (480);   // delay according to datasheet
-
-	gpio_set_input ();    // set the pin as input
-	delay (80);    // delay according to datasheet
-
-	if (!(HAL_GPIO_ReadPin (GPIOA, GPIO_PIN_1)))    // if the pin is low i.e the presence pulse is there
-	{
-		return 0;
-	}
-
-	else
-	{
-		delay (400);
-		return 1;
-	}
-}
-
-void write (uint8_t data)
-{
-	gpio_set_output ();   // set as output
-
-	for (int i=0; i<8; i++)
-	{
-
-		if ((data & (1<<i))!=0)  // if the bit is high
-		{
-			// write 1
-
-			gpio_set_output ();  // set as output
-			HAL_GPIO_WritePin (GPIOA, GPIO_PIN_1, 0);  // pull the pin LOW
-			delay (1);  // wait for  us
-
-			gpio_set_input ();  // set as input
-			delay (60);  // wait for 60 us
-		}
-
-		else  // if the bit is low
-		{
-			// write 0
-
-			gpio_set_output ();
-			HAL_GPIO_WritePin (GPIOA, GPIO_PIN_1, 0);  // pull the pin LOW
-			delay (60);  // wait for 60 us
-
-			gpio_set_input ();
-		}
-	}
-}
-
-
-uint8_t read (void)
-{
-	uint8_t value=0;
-	gpio_set_input ();
-
-	for (int i=0;i<8;i++)
-	{
-		gpio_set_output ();   // set as output
-
-		HAL_GPIO_WritePin (GPIOA, GPIO_PIN_1, 0);  // pull the data pin LOW
-		delay (2);  // wait for 2 us
-
-		gpio_set_input ();  // set as input
-		if (HAL_GPIO_ReadPin (GPIOA, GPIO_PIN_1))  // if the pin is HIGH
-		{
-			value |= 1<<i;  // read = 1
-		}
-		delay (60);  // wait for 60 us
-	}
-	return value;
-}
-
 
 /* IT IS FOR BMP180 PRES SENSOR*/
 /*Function to read calibration parameters */
