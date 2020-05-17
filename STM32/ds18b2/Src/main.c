@@ -85,11 +85,13 @@ void run_pulseSensor(void);
 GPIO_InitTypeDef GPIO_InitStruct;
 
 /*IT IS FOR PULSE SENSOR*/
-uint8_t tempData[3];
+uint8_t tempData[7];
 char pulseValue[50];
 int lenOfPulseValue = 0;
 int pulseRes = 0;
-
+int weightRes = 0;
+uint8_t pulseData[3];
+uint8_t weightData[3];
 /* USER CODE END 0 */
 
 /**
@@ -135,7 +137,7 @@ int main(void)
   SetupBMP(hi2c1);
 
   // Pulse sensor initialize with interrupt
-  HAL_UART_Receive_IT(&huart6,tempData, 3);
+  HAL_UART_Receive_IT(&huart6,tempData, 7);
 
   /* USER CODE END 2 */
 
@@ -518,21 +520,36 @@ void delay(uint16_t delay){
 /*IT IS FOR PULSE SENSOR WITH INTERRUTP*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	int i = 0;
-		HAL_UART_Receive_IT(&huart6, tempData, 3);
-		sscanf(tempData,"%d", &pulseRes);
-		sprintf(pulseValue,"pulse.val=%d%c%c%c%c",pulseRes,0xFF, 0xFF, 0xFF,'\n');
-		while(pulseValue[i]!='\n'){
-			lenOfPulseValue++;
-			++i;
-		}
-		i=0;
-		HAL_UART_Transmit(&huart1,pulseValue,lenOfPulseValue,100);
+		int i = 0;
+		HAL_UART_Receive_IT(&huart6, tempData, 7);
 
-		lenOfPulseValue=0;
+		pulseData[0] = tempData[0];
+		pulseData[1] = tempData[1];
+		pulseData[2] = tempData[2];
+
+
+		weightData[0] = tempData[4];
+		weightData[1] = tempData[5];
+		weightData[2] = tempData[6];
+
+		sscanf(pulseData,"%d", &pulseRes);
+		sscanf(weightData,"%d",&weightRes);
+		//sprintf(pulseValue,"pulse.val=%d%c%c%c%c",pulseRes,0xFF, 0xFF, 0xFF,'\n');
+		//while(pulseValue[i]!='\n'){
+		//	lenOfPulseValue++;
+		//	++i;
+		//}
+		//i=0;
+		//HAL_UART_Transmit(&huart1,pulseValue,lenOfPulseValue,100);
+
+		//lenOfPulseValue=0;
 		tempData[0] = '\000';
 		tempData[1] = '\000';
 		tempData[2] = '\000';
+		tempData[3] = '\000';
+		tempData[4] = '\000';
+		tempData[5] = '\000';
+		tempData[6] = '\000';
 }
 
 /* USER CODE END 4 */
