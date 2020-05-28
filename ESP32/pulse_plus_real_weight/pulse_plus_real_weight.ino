@@ -126,35 +126,59 @@ void loop() {
     }
     
   }
-  
+  total_data[3] = '/';
   // check for new data/start next conversion:
   if (LoadCell.update()) newDataReady = true;
 
   // get smoothed value from the dataset:
   if (newDataReady) {
+    Serial.println("Yeni data hazır");
     if (millis() > t + serialPrintInterval) {
       float i = LoadCell.getData();
       int intweight = (int)i;
+      int kgweight = intweight/1000;
       Serial.print("Kilo: ");
       Serial.println(intweight);
-    
-      itoa(intweight, buf_weight, 10);
-      Serial.print("Kilo1: ");
-      Serial.println(buf_weight[0]);
-      Serial.print("Kilo2: ");
-      Serial.println(buf_weight[1]);
-      Serial.print("Kilo3: ");
-      Serial.println(buf_weight[2]);
-          
-      total_data[3] = '/';
-      total_data[4] = buf_weight[0];
-      total_data[5] = buf_weight[1];
-      total_data[6] = buf_weight[2];
+
+      Serial.print("Kilo KG : ");
+      Serial.println(kgweight);
+      itoa(kgweight, buf_weight, 10);
+      if (kgweight < 10){
+          total_data[4] = '0';
+          total_data[5] = '0';
+          total_data[6] = buf_weight[0];
+      }
+      else if (kgweight >= 10 && kgweight < 100){
+          total_data[4] = '0';
+          total_data[5] = buf_weight[0];
+          total_data[6] = buf_weight[1];
+      } 
+      //Serial.print("Kilo1: ");
+      //Serial.println(buf_weight[0]);
+      //Serial.print("Kilo2: ");
+      //Serial.println(buf_weight[1]);
+      //Serial.print("Kilo3: ");
+      //Serial.println(buf_weight[2]);
+      else {
+        total_data[4] = buf_weight[0];
+        total_data[5] = buf_weight[1];
+        total_data[6] = buf_weight[2];  
+      }    
+     
+      
       Serial.print("Load_cell output val: ");
       Serial.println(i);
       newDataReady = 0;
       t = millis();
     }
+    else{
+      Serial.println("Else'e girdim");
+      //itoa(mogint,mogData,10);
+      //total_data[4] = mogData[0];
+      //total_data[5] = mogData[1];
+      //total_data[6] = mogData[2];
+    }
+  
   }
 
   // receive command from serial terminal
@@ -178,11 +202,13 @@ void loop() {
   final_data[4] = total_data[4];
   final_data[5] = total_data[5];
   final_data[6] = total_data[6];
-  
+  final_data[7] = '\0';
   Serial.print("Final Data:");
   Serial.println(final_data);
+ 
   connection.print(final_data);
-  delay(1000);
+ 
+  delay(400);
 }
 
 void calibrate() {
