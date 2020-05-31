@@ -105,5 +105,5 @@ void runDHT22(UART_HandleTypeDef huart){
 			++i;
 		}
 		i=0;
-		HAL_UART_Transmit(&huart,dht22humidity,lenOfdht22humidity,100);
+		HAL_UART_Transmit(&huart,dht22humidity,lenOfdht22humidity,20);
 }

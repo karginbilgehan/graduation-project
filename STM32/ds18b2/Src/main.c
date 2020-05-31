@@ -85,9 +85,11 @@ void run_pulseSensor(void);
 GPIO_InitTypeDef GPIO_InitStruct;
 
 /*IT IS FOR PULSE SENSOR*/
-uint8_t tempData[7];
+uint8_t incomingData[7];
 char pulseValue[50];
+char weightValue[50];
 int lenOfPulseValue = 0;
+int lenOfWeightValue = 0;
 int pulseRes = 0;
 int weightRes = 0;
 uint8_t pulseData[3];
@@ -137,7 +139,7 @@ int main(void)
   SetupBMP(hi2c1);
 
   // Pulse sensor initialize with interrupt
-  HAL_UART_Receive_IT(&huart6,tempData, 7);
+  HAL_UART_Receive_IT(&huart6,incomingData, 7);
 
   /* USER CODE END 2 */
 
@@ -158,8 +160,8 @@ int main(void)
 	 HAL_Delay(100);
 
 	 /*FOR DHT22 SENSOR */
-	 runDHT22(huart1);
-	 HAL_Delay(100);
+	 //runDHT22(huart1);
+	 //HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -497,8 +499,8 @@ void delay(uint16_t delay){
 /*void run_pulseSensor(void)
 {
 	int i = 0;
-	HAL_UART_Receive_IT(&huart6, (uint8_t *)tempData, 3);
-	sscanf(tempData,"%d", &pulseRes);
+	HAL_UART_Receive_IT(&huart6, (uint8_t *)incomingData, 3);
+	sscanf(incomingData,"%d", &pulseRes);
 	sprintf(pulseValue,"pulse.val=%d%c%c%c%c",pulseRes,0xFF, 0xFF, 0xFF,'\n');
 
 	while(pulseValue[i]!='\n'){
@@ -509,9 +511,9 @@ void delay(uint16_t delay){
 	HAL_UART_Transmit(&huart1,pulseValue,lenOfPulseValue,100);
 
 	lenOfPulseValue=0;
-	tempData[0] = '\000';
-	tempData[1] = '\000';
-	tempData[2] = '\000';
+	incomingData[0] = '\000';
+	incomingData[1] = '\000';
+	incomingData[2] = '\000';
 
 }*/
 
@@ -521,35 +523,47 @@ void delay(uint16_t delay){
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 		int i = 0;
-		HAL_UART_Receive_IT(&huart6, tempData, 7);
+		HAL_UART_Receive_IT(&huart6, incomingData, 7);
 
-		pulseData[0] = tempData[0];
-		pulseData[1] = tempData[1];
-		pulseData[2] = tempData[2];
+		pulseData[0] = incomingData[0];
+		pulseData[1] = incomingData[1];
+		pulseData[2] = incomingData[2];
 
 
-		weightData[0] = tempData[4];
-		weightData[1] = tempData[5];
-		weightData[2] = tempData[6];
+		weightData[0] = incomingData[4];
+		weightData[1] = incomingData[5];
+		weightData[2] = incomingData[6];
 
 		sscanf(pulseData,"%d", &pulseRes);
 		sscanf(weightData,"%d",&weightRes);
-		//sprintf(pulseValue,"pulse.val=%d%c%c%c%c",pulseRes,0xFF, 0xFF, 0xFF,'\n');
-		//while(pulseValue[i]!='\n'){
-		//	lenOfPulseValue++;
-		//	++i;
-		//}
-		//i=0;
-		//HAL_UART_Transmit(&huart1,pulseValue,lenOfPulseValue,100);
 
-		//lenOfPulseValue=0;
-		tempData[0] = '\000';
-		tempData[1] = '\000';
-		tempData[2] = '\000';
-		tempData[3] = '\000';
-		tempData[4] = '\000';
-		tempData[5] = '\000';
-		tempData[6] = '\000';
+		//SEND DATA FROM STM32 TO LCD FOR PULSE VALUE
+		sprintf(pulseValue,"pulse.val=%d%c%c%c%c",pulseRes,0xFF, 0xFF, 0xFF,'\n');
+		while(pulseValue[i]!='\n'){
+			lenOfPulseValue++;
+			++i;
+		}
+		i=0;
+		HAL_UART_Transmit(&huart1,pulseValue,lenOfPulseValue,20);
+		lenOfPulseValue=0;
+
+		//SEND DATA FROM STM32 TO LCD FOR WEIGHT VALUE
+		sprintf(weightValue,"weight.val=%d%c%c%c%c",weightRes,0xFF, 0xFF, 0xFF,'\n');
+		while(weightValue[i]!='\n'){
+			lenOfWeightValue++;
+			++i;
+		}
+		i=0;
+		HAL_UART_Transmit(&huart1,weightValue,lenOfWeightValue,20);
+		lenOfWeightValue=0;
+
+		incomingData[0] = '\000';
+		incomingData[1] = '\000';
+		incomingData[2] = '\000';
+		incomingData[3] = '\000';
+		incomingData[4] = '\000';
+		incomingData[5] = '\000';
+		incomingData[6] = '\000';
 }
 
 /* USER CODE END 4 */

@@ -96,7 +96,7 @@ void ReadBMP180(I2C_HandleTypeDef hi2c, UART_HandleTypeDef huart){
 				++i;
 			}
 			i=0;
-			HAL_UART_Transmit(&huart,dizi2,lenOfDizi2,100);
+			HAL_UART_Transmit(&huart,dizi2,lenOfDizi2,20);
 		}
 	}
 }

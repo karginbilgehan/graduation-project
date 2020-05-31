@@ -129,5 +129,5 @@ void runDS18B(GPIO_InitTypeDef GPIO_InitStruct,UART_HandleTypeDef huart){
 			 ++i;
 		 }
 		 i=0;
-		 HAL_UART_Transmit(&huart,ds18bval,lenOfds18,100);
+		 HAL_UART_Transmit(&huart,ds18bval,lenOfds18,20);
 }
