@@ -47,9 +47,9 @@ char nabiz_2_digit[1];
 char nabiz_temp[2];
 char total_data[7]; // include weight and pulse value  
 int nabiz_2;
-
 char final_data[2];
-
+int flag = 0;
+int counter = 0;
 //Pulse Sensor Constructor
 PulseSensorPlayground pulseSensor; //Sensörümüzü kodumuzda kullanabilmek için onu obje olarak oluşturuyoruz.
 
@@ -82,12 +82,8 @@ void setup() {
   if (pulseSensor.begin()) {
     Serial.println("Pulse sensörü objesini yarattık."); 
   } //Pulse sensörü başarıyla başlatılırsa bilgisayara mesaj gönderioyoruz.
-}
 
-void loop() {
-  static boolean newDataReady = 0;
-  const int serialPrintInterval = 0; //increase value to slow down serial print activity
-
+  
   total_data[0] = '0';
   total_data[1] = '0';
   total_data[2] = '0';
@@ -95,6 +91,12 @@ void loop() {
   total_data[4] = '0';
   total_data[5] = '0';
   total_data[6] = '0';
+
+}
+
+void loop() {
+  static boolean newDataReady = 0;
+  const int serialPrintInterval = 0; //increase value to slow down serial print activity
 
 
   if (pulseSensor.sawStartOfBeat()) { //Eğer nabız algılarsak
@@ -105,24 +107,30 @@ void loop() {
     if(nabiz < 100)
     {
       Serial.println(nabiz);
-      itoa(nabiz,nabiz_temp,10);
-      total_data[0] = '0';
-      total_data[1] = nabiz_temp[0];
-      total_data[2] = nabiz_temp[1];
-      //Serial.println(nabiz_2_digit); //Dakikdaki nabız değerini aynıo zamanda bilgisayarımıza da gönderiyoruz.
-      //connection.print(nabiz_2_digit);
-      
+      if(nabiz > 50){
+          itoa(nabiz,nabiz_temp,10);
+          total_data[0] = '0';
+          total_data[1] = nabiz_temp[0];
+          total_data[2] = nabiz_temp[1];
+          flag = 1;
+          //Serial.println(nabiz_2_digit); //Dakikdaki nabız değerini aynıo zamanda bilgisayarımıza da gönderiyoruz.
+          //connection.print(nabiz_2_digit);
+      }         
     } 
                            
     else
     {
       Serial.println(nabiz); //Dakikdaki nabız değerini aynı zamanda bilgisayarımıza da gönderiyoruz.
-      itoa(nabiz,nabiz_temp,10);
-      total_data[0] = nabiz_temp[0];
-      total_data[1] = nabiz_temp[1];
-      total_data[2] = nabiz_temp[2];
-      //connection.print(nabiz);  
-      //connection.print(deneme);
+      if(nabiz < 120){
+          itoa(nabiz,nabiz_temp,10);
+          total_data[0] = nabiz_temp[0];
+          total_data[1] = nabiz_temp[1];
+          total_data[2] = nabiz_temp[2];
+          flag=1;
+          //connection.print(nabiz);  
+          //connection.print(deneme);    
+      }
+      
     }
     
   }
@@ -135,8 +143,9 @@ void loop() {
     Serial.println("Yeni data hazır");
     if (millis() > t + serialPrintInterval) {
       float i = LoadCell.getData();
-      int intweight = (int)i;
-      int kgweight = intweight/1000;
+      int temp_i = i/1000.0;
+      int intweight = (int)temp_i;
+      int kgweight = intweight;
       Serial.print("Kilo: ");
       Serial.println(intweight);
 
@@ -205,9 +214,20 @@ void loop() {
   final_data[7] = '\0';
   Serial.print("Final Data:");
   Serial.println(final_data);
- 
+
+  if(flag == 1){
+    counter++;
+  } 
+
+  if (counter >= 15){
+      total_data[0] = '0';
+      total_data[1] = '0';
+      total_data[2] = '0';
+      flag = 0;
+      counter = 0;
+  }
   connection.print(final_data);
- 
+  
   delay(400);
 }
 

@@ -94,6 +94,8 @@ int pulseRes = 0;
 int weightRes = 0;
 uint8_t pulseData[3];
 uint8_t weightData[3];
+
+uint8_t counter = 0;
 /* USER CODE END 0 */
 
 /**
@@ -137,7 +139,8 @@ int main(void)
 
   /*Press Sensor Initialize*/
   SetupBMP(hi2c1);
-
+  runDHT22(huart1);
+  HAL_Delay(100);
   // Pulse sensor initialize with interrupt
   HAL_UART_Receive_IT(&huart6,incomingData, 7);
 
@@ -160,8 +163,12 @@ int main(void)
 	 HAL_Delay(100);
 
 	 /*FOR DHT22 SENSOR */
-	 //runDHT22(huart1);
-	 //HAL_Delay(100);
+	 if(counter >= 25){
+		 runDHT22(huart1);
+		 HAL_Delay(100);
+		 counter = 0;
+	 }
+
   }
   /* USER CODE END 3 */
 }
@@ -564,6 +571,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		incomingData[4] = '\000';
 		incomingData[5] = '\000';
 		incomingData[6] = '\000';
+
+		counter++;
 }
 
 /* USER CODE END 4 */
