@@ -1,24 +1,5 @@
-/*
-   -------------------------------------------------------------------------------------
-   HX711_ADC
-   Arduino library for HX711 24-Bit Analog-to-Digital Converter for Weight Scales
-   Olav Kallhovd sept2017
-   -------------------------------------------------------------------------------------
-*/
-
-/*
-   This example file shows how to calibrate the load cell and optionally store the calibration
-   value in EEPROM, and also how to change the value manually.
-   The result value can then later be included in your project sketch or fetched from EEPROM.
-
-   To implement calibration in your project sketch the simplified procedure is as follow:
-       LoadCell.tare();
-       //place known mass
-       LoadCell.refreshDataSet();
-       float newCalibrationValue = LoadCell.getNewCalibration(known_mass);
-*/
-#define USE_ARDUINO_INTERRUPTS true    // Pulse kütüphanesinin daha doğru ölçüm yapabilmesi için bu ayarı etkinleştiriyoruz
-#include <PulseSensorPlayground.h> //Yazının başında bilgisayarımıza kurmuş olduğumuz Pulse Playground kütüphanesini ekliyoruz. 
+#define USE_ARDUINO_INTERRUPTS true   
+#include <PulseSensorPlayground.h>  
 #include <SoftwareSerial.h>
 
 
@@ -26,32 +7,30 @@
 #include <EEPROM.h>
 
 #include <stdio.h>
-//pins:
+//pins
 const int HX711_dout = 4; //mcu > HX711 dout pin
 const int HX711_sck = 5; //mcu > HX711 sck pin
 
-//HX711 constructor:
+//HX711 constructor
 HX711_ADC LoadCell(HX711_dout, HX711_sck);
 //Hc-06 conneciton
 SoftwareSerial connection(8,7);//RX,TX
 
 const int calVal_eepromAdress = 0;
 long t;
-char buf_weight[3];
+char bufWeight[3];
 
-//pulse sensor datas
-const int PulseWire = 0; // Pulse sensörümüzü bağlamış olduğumuz Analog pinini belirliyoruz
-int nabiz; //İçinde dakikadaki nabzı tutacağımız değişkeni oluşturuyoruz.
-int Threshold = 510; // Yazının başında belirlemiş olduğumuz eşik değerini bu değişkene atıyoruz.
-char nabiz_2_digit[1];
-char nabiz_temp[2];
-char total_data[7]; // include weight and pulse value  
-int nabiz_2;
-char final_data[2];
-int flag = 0;
-int counter = 0;
-//Pulse Sensor Constructor
-PulseSensorPlayground pulseSensor; //Sensörümüzü kodumuzda kullanabilmek için onu obje olarak oluşturuyoruz.
+//pulse sensor data
+const int PulseWire = 0; // analog pin for pulse sensor
+int pulse; 
+int Threshold = 510; 
+char tempPulse[3];
+char totalData[7]; // contains weight and pulse value  
+char finalData[7]; // contains data to be sent to STM32 
+int flag = 0; // to check if the pulse reading is present
+int counterForMeasurementRange = 0;
+
+PulseSensorPlayground pulseSensor; // to create a pulse object
 
 void setup() {
   Serial.begin(57600); delay(10);
@@ -75,22 +54,22 @@ void setup() {
 
   connection.begin(9600);
   
-  pulseSensor.analogInput(PulseWire); //Pulse sensörünün bağlıu olduğu pini belirliyoruz.
-  pulseSensor.blinkOnPulse(13);       //arduino üzerindeki ledin nabzımızla yanıp sönmesini istediğimizi söylüyoruz.
-  pulseSensor.setThreshold(Threshold); //Değişkene atamış olduğumuz eşik değerini uyguluyoruz.
+  pulseSensor.analogInput(PulseWire); //pin for pulse sensor
+  pulseSensor.blinkOnPulse(13);       
+  pulseSensor.setThreshold(Threshold); 
 
   if (pulseSensor.begin()) {
-    Serial.println("Pulse sensörü objesini yarattık."); 
-  } //Pulse sensörü başarıyla başlatılırsa bilgisayara mesaj gönderioyoruz.
-
+    Serial.println("Pulse sensor crated."); 
+  } 
   
-  total_data[0] = '0';
-  total_data[1] = '0';
-  total_data[2] = '0';
-  total_data[3] = '/';
-  total_data[4] = '0';
-  total_data[5] = '0';
-  total_data[6] = '0';
+  //initialize total data 
+  totalData[0] = '0';
+  totalData[1] = '0';
+  totalData[2] = '0';
+  totalData[3] = '/';
+  totalData[4] = '0';
+  totalData[5] = '0';
+  totalData[6] = '0';
 
 }
 
@@ -98,94 +77,79 @@ void loop() {
   static boolean newDataReady = 0;
   const int serialPrintInterval = 0; //increase value to slow down serial print activity
 
-
-  if (pulseSensor.sawStartOfBeat()) { //Eğer nabız algılarsak
-    nabiz = pulseSensor.getBeatsPerMinute(); //Dakikadaki nabzı nabiz değişkenine kaydediyoruz.
-    Serial.println("Nabız attı. ");
+  // TO GET PULSE VALUE
+  if (pulseSensor.sawStartOfBeat()) { 
+    pulse = pulseSensor.getBeatsPerMinute(); 
     Serial.print("BPM: ");
-    
-    if(nabiz < 100)
+    Serial.print(pulse);
+
+    if(pulse < 100)
     {
-      Serial.println(nabiz);
-      if(nabiz > 50){
-          itoa(nabiz,nabiz_temp,10);
-          total_data[0] = '0';
-          total_data[1] = nabiz_temp[0];
-          total_data[2] = nabiz_temp[1];
+      Serial.println(pulse);
+      if(pulse > 50){
+          itoa(pulse,tempPulse,10);
+          totalData[0] = '0';
+          totalData[1] = tempPulse[0];
+          totalData[2] = tempPulse[1];
           flag = 1;
-          //Serial.println(nabiz_2_digit); //Dakikdaki nabız değerini aynıo zamanda bilgisayarımıza da gönderiyoruz.
-          //connection.print(nabiz_2_digit);
       }         
     } 
                            
     else
     {
-      Serial.println(nabiz); //Dakikdaki nabız değerini aynı zamanda bilgisayarımıza da gönderiyoruz.
-      if(nabiz < 120){
-          itoa(nabiz,nabiz_temp,10);
-          total_data[0] = nabiz_temp[0];
-          total_data[1] = nabiz_temp[1];
-          total_data[2] = nabiz_temp[2];
-          flag=1;
-          //connection.print(nabiz);  
-          //connection.print(deneme);    
-      }
-      
+      Serial.println(pulse);
+      if(pulse < 120){
+          itoa(pulse,tempPulse,10);
+          totalData[0] = tempPulse[0];
+          totalData[1] = tempPulse[1];
+          totalData[2] = tempPulse[2];
+          flag=1;  
+      }     
     }
     
   }
-  total_data[3] = '/';
+  totalData[3] = '/';
   // check for new data/start next conversion:
   if (LoadCell.update()) newDataReady = true;
 
   // get smoothed value from the dataset:
   if (newDataReady) {
-    Serial.println("Yeni data hazır");
     if (millis() > t + serialPrintInterval) {
-      float i = LoadCell.getData();
-      int temp_i = i/1000.0;
-      int intweight = (int)temp_i;
-      int kgweight = intweight;
-      Serial.print("Kilo: ");
-      Serial.println(intweight);
-
-      Serial.print("Kilo KG : ");
-      Serial.println(kgweight);
-      itoa(kgweight, buf_weight, 10);
-      if (kgweight < 10){
-          total_data[4] = '0';
-          total_data[5] = '0';
-          total_data[6] = buf_weight[0];
+      float tempWeight = LoadCell.getData();
+      int realWeight = (int)(tempWeight/1000.0);
+      
+      // FOR DEBUGGING;
+      Serial.print("Real weight : ");
+      Serial.println(realWeight);
+      
+      itoa(realWeight, bufWeight, 10);
+      if (realWeight < 10){
+          totalData[4] = '0';
+          totalData[5] = '0';
+          totalData[6] = bufWeight[0];
       }
-      else if (kgweight >= 10 && kgweight < 100){
-          total_data[4] = '0';
-          total_data[5] = buf_weight[0];
-          total_data[6] = buf_weight[1];
+      else if (realWeight >= 10 && realWeight < 100){
+          totalData[4] = '0';
+          totalData[5] = bufWeight[0];
+          totalData[6] = bufWeight[1];
       } 
-      //Serial.print("Kilo1: ");
-      //Serial.println(buf_weight[0]);
-      //Serial.print("Kilo2: ");
-      //Serial.println(buf_weight[1]);
-      //Serial.print("Kilo3: ");
-      //Serial.println(buf_weight[2]);
       else {
-        total_data[4] = buf_weight[0];
-        total_data[5] = buf_weight[1];
-        total_data[6] = buf_weight[2];  
+        totalData[4] = bufWeight[0];
+        totalData[5] = bufWeight[1];
+        totalData[6] = bufWeight[2];  
       }    
      
-      
+      // FOR DEBUGGING
       Serial.print("Load_cell output val: ");
-      Serial.println(i);
+      Serial.println(tempWeight);
+
       newDataReady = 0;
       t = millis();
+
     }
+
     else{
-      Serial.println("Else'e girdim");
-      //itoa(mogint,mogData,10);
-      //total_data[4] = mogData[0];
-      //total_data[5] = mogData[1];
-      //total_data[6] = mogData[2];
+      // Nothing to do.
     }
   
   }
@@ -204,33 +168,37 @@ void loop() {
     Serial.println("Tare complete");
   }
 
-  final_data[0] = total_data[0];
-  final_data[1] = total_data[1];
-  final_data[2] = total_data[2];
-  final_data[3] = total_data[3];
-  final_data[4] = total_data[4];
-  final_data[5] = total_data[5];
-  final_data[6] = total_data[6];
-  final_data[7] = '\0';
-  Serial.print("Final Data:");
-  Serial.println(final_data);
+  finalData[0] = totalData[0];
+  finalData[1] = totalData[1];
+  finalData[2] = totalData[2];
+  finalData[3] = totalData[3];
+  finalData[4] = totalData[4];
+  finalData[5] = totalData[5];
+  finalData[6] = totalData[6];
+  finalData[7] = '\0';
+
+  // FOR DEBUGGING
+  Serial.print("Final Data:"); 
+  Serial.println(finalData);
 
   if(flag == 1){
-    counter++;
+    counterForMeasurementRange++;
   } 
 
-  if (counter >= 15){
-      total_data[0] = '0';
-      total_data[1] = '0';
-      total_data[2] = '0';
+  if (counterForMeasurementRange >= 15){
+      totalData[0] = '0';
+      totalData[1] = '0';
+      totalData[2] = '0';
       flag = 0;
-      counter = 0;
+      counterForMeasurementRange = 0;
   }
-  connection.print(final_data);
-  
+  connection.print(finalData); // To send data from ESP32 to STM32
   delay(400);
 }
 
+/**
+ * It needs to calibrate HX711 load cells.
+ */
 void calibrate() {
   Serial.println("***");
   Serial.println("Start calibration:");
