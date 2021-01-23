@@ -29,6 +29,7 @@ char totalData[7]; // contains weight and pulse value
 char finalData[7]; // contains data to be sent to STM32 
 int flag = 0; // to check if the pulse reading is present
 int counterForMeasurementRange = 0;
+int thresholdForMeasurement = 15;
 
 PulseSensorPlayground pulseSensor; // to create a pulse object
 
@@ -185,7 +186,7 @@ void loop() {
     counterForMeasurementRange++;
   } 
 
-  if (counterForMeasurementRange >= 15){
+  if (counterForMeasurementRange >= thresholdForMeasurement){
       totalData[0] = '0';
       totalData[1] = '0';
       totalData[2] = '0';
